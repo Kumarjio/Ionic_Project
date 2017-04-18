@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html>
+<head>
+<script type="text/javascript" src="http://ajax.googleapis.com/ajax/libs/jquery/1.10.1/jquery.min.js"></script>
+<script src="script/parse-1.6.14.js"></script>
+<script type="text/javascript">
+	var lat, long;
+	var county, stat;
+	function getLocation() {
+		if (navigator.geolocation)
+		{
+			navigator.geolocation.getCurrentPosition(function(position) {
+			console.log(position.coords.latitude, position.coords.longitude);
+			lat = position.coords.latitude;
+			long = position.coords.longitude;
+			});
+		}
+		else
+		{
+			console.log("error");
+		}
+	}
+
+	function getInfo()
+	{
+		var requestURL = 'https://search.mapzen.com/v1/reverse?api_key=search-3TV73br&point.lat='+lat + '&point.lon=' + long;
+			var xmlhttp = new XMLHttpRequest();
+			xmlhttp.onreadystatechange = function() {
+			    if (xmlhttp.readyState == 4 && xmlhttp.status == 200) {
+			        var myArr = JSON.parse(xmlhttp.responseText);
+			        myFunction(myArr);
+			    }
+			};
+			xmlhttp.open("GET", requestURL, true);
+			xmlhttp.send();
+
+			function myFunction(arr) {
+			    county= arr.features[0].properties.locality;
+		        stat= arr.features[0].properties.region;		
+		        console.log("county: " + county);
+		        console.log("stat: " + stat);
+		        document.getElementById("city").innerHTML = county;
+		        document.getElementById("state").innerHTML = stat;
+			}
+	}
+
+
+	function submit()
+	{
+		
+		Parse.initialize("fyqmax4vrwbtWzGtaVx2LFfqpBIfQLoIMmXCfseP", "t0A6APpX6jm6YFHEXq5vrQrZxeftmZBw5AufNvdt");
+		Parse.User.logIn("Xia", "123456", {
+		  success: function(user) {
+		    console.log("log in successful");
+		  },
+		  error: function(user, error) {
+		    // The login failed. Check error to see why.
+		    console.log("log in error");
+		  }
+		});
+
+		var currentUser = Parse.User.current();
+		var title = $("#post-title").val();
+		var category = $("#post-category").val();
+		var price = $("#post-price").val();
+		price = Number(price);
+		var descrip = $("#post-decription").val();
+
+		var post = new Parse.Object("Post");
+
+		post.set("user", currentUser);
+		post.set("title", title);
+		post.set("category", category);
+		post.set("description", descrip);
+		post.set("price", price);
+
+		var fileElement = $("#post-file")[0];
+
+		console.log(fileElement.files);
+		var fileList = fileElement.files;
+		// console.log(fileList.length);
+		// console.log(fileList[0].name);
+		var fileArray = [];
+		for (var i=0; i<fileList.length; i++)
+		{
+			var name = fileList[i].name;
+			var newFile = new Parse.File(name, fileList[i]);
+			fileArray.push(newFile);
+		}
+		post.set("pictures", fileArray);
+		post.set("city", county);
+	    post.set("state", stat);
+	    var point = new Parse.GeoPoint({latitude: lat, longitude: long});
+	    post.set("location", point);
+		
+		post.save(null, {
+	        success: function(gameScore) {
+	          alert("success!");
+	        },
+	        error: function(gameScore, error) {
+	          // Execute any logic that should take place if the save fails.
+	          // error is a Parse.Error with an error code and message.
+	          console.log('Failed to create new object, with error code: ' + error.message);
+	        }
+	      });
+		
+	}
+</script>
+</head>
+<body>
+  <p><input id="post-title" type="text" placeholder="title"> </p>
+  <p>
+  <select id="post-category">
+	      <option selected>Cars</option>
+	      <option>Pets</option>
+	      <option>Electronics</option>
+	      <option>Computers</option>
+	      <option>Books</option>
+	      <option>Houses</option>
+  </select>
+  </p>
+  <p><input id="post-price" type="number" placeholder="price"> </p>
+  <p><textarea id="post-decription"></textarea> </p>
+  <button onclick="getLocation()">Get Location</button>
+  <button onclick="getInfo()">Get City AND State</button>
+  <p><span>City:</span><span id="city"> </span></p>
+  <p><span>State:</span><span id="state"> </span></p>
+  <p><input type="file" id="post-file" multiple></p>
+  <button onclick="submit()">submit</button>
+</body>
+</html>
